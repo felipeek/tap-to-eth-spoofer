@@ -1,4 +1,16 @@
 #pragma once
 
-struct ether_header* packet_ethernet_get_header(const char* packet);
-void packet_ethernet_print(const char* packet);
+#include <net/ethernet.h>
+#include <netinet/ip.h>
+
+struct ether_header* packet_ethernet_get_header(const unsigned char* packet);
+uint16_t packet_ethernet_get_type(const struct ether_header* ether_header);
+const uint8_t* packet_ethernet_get_src_mac_addr(const struct ether_header* ether_header);
+const uint8_t* packet_ethernet_get_dst_mac_addr(const struct ether_header* ether_header);
+void packet_ethernet_print(const struct ether_header* ether_header);
+struct iphdr* packet_ip_get_header(const unsigned char* packet);
+uint32_t packet_ip_get_src_ip(const struct iphdr* ip_header);
+uint32_t packet_ip_get_dst_ip(const struct iphdr* ip_header);
+static void ip_to_str(uint32_t ip, char buf[32]);
+void packet_ip_print(const struct iphdr* ip_header);
+void packet_print(const unsigned char* packet);

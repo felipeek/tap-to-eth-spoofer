@@ -1,3 +1,3 @@
 #!/bin/bash
 mkdir -p bin
-gcc -o main src/main.c src/packet.c -g
+gcc -o bin/main src/main.c src/packet.c -g
