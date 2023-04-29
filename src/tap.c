@@ -11,16 +11,16 @@
 #include <linux/if_arp.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <assert.h>
 
 #include "tap.h"
 
-int tap_init() {
-	int fd;
+int tap_init(Tap_Descriptor* tap) {
 	struct ifreq ifr;
 	struct sockaddr_in addr;
 
 	// Open the TAP device
-	if ((fd = open(TAP_DEVICE_FILE, O_RDWR)) < 0) {
+	if ((tap->fd = open(TAP_DEVICE_FILE, O_RDWR)) < 0) {
 		perror("fail to open tap device (open)");
 		return -1;
 	}
@@ -30,9 +30,9 @@ int tap_init() {
 	strncpy(ifr.ifr_name, TAP_INTERFACE_NAME, IFNAMSIZ);
 
 	// Create the TAP interface via the TAP device
-	if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0) {
+	if (ioctl(tap->fd, TUNSETIFF, (void *)&ifr) < 0) {
 		perror("fail to create tap interface (ioctl)");
-		close(fd);
+		close(tap->fd);
 		return -1;
 	}
 
@@ -41,14 +41,14 @@ int tap_init() {
 	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
 		perror("fail to create socket for tap interface (socket)");
-		close(fd);
+		close(tap->fd);
 		return -1;
 	}
 
 	// Get tap interface flags, so we can add others on top of them
 	if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) < 0) {
 		perror("fail to get tap interface flags (ioctl)");
-		close(fd);
+		close(tap->fd);
 		close(sockfd);
 		return -1;
 	}
@@ -59,7 +59,7 @@ int tap_init() {
 	// Set the new flags to tap interface
 	if (ioctl(sockfd, SIOCSIFFLAGS, &ifr)) {
 		perror("fail to set tap interface flags (ioctl)");
-		close(fd);
+		close(tap->fd);
 		close(sockfd);
 		return -1;
 	}
@@ -73,7 +73,7 @@ int tap_init() {
 	// Set tap interface IP
 	if (ioctl(sockfd, SIOCSIFADDR, &ifr) < 0) {
 		perror("fail to set tap interface IP (ioctl)");
-		close(fd);
+		close(tap->fd);
 		close(sockfd);
 		return -1;
 	}
@@ -84,11 +84,39 @@ int tap_init() {
 	// Set tap interface MAC address
 	if (ioctl(sockfd, SIOCSIFHWADDR, &ifr) < 0) {
 		perror("fail to set tap interface MAC addr (ioctl)");
-		close(fd);
+		close(tap->fd);
 		close(sockfd);
 		return -1;
 	}
 
 	close(sockfd);
-	return fd;
+	return 0;
+}
+
+int tap_send(Tap_Descriptor* tap, const uint8_t* packet_data, int32_t packet_size) {
+	int32_t bytes_written = write(tap->fd, packet_data, packet_size);
+
+	if (bytes_written < 0) {
+		perror("unable to write spoofed packet to tap interface (write)");
+		return -1;
+	}
+
+	assert(bytes_written == packet_size); // TODO: Is it possible in this particular case that 'write' will write less?
+
+	return 0;
+}
+
+int tap_receive(Tap_Descriptor* tap, uint8_t* buffer, uint32_t buffer_size, int32_t* received_packet_size) {
+	int32_t bytes_read = read(tap->fd, buffer, buffer_size);
+	if (bytes_read < 0) {
+		perror("fail to read packets from tap interface (read)");
+		return -1;
+	}
+
+	*received_packet_size = bytes_read;
+	return 0;
+}
+
+void tap_release(Tap_Descriptor* tap) {
+	close(tap->fd);
 }

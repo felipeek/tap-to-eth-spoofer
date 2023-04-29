@@ -9,17 +9,17 @@
 static uint8_t* out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t sent_packet_length,
 		const uint8_t* received_packet_data, int32_t received_packet_length, int32_t* new_length) {
 
-	struct ether_header* sent_packet_ether_header = packet_ethernet_get_header(sent_packet_data);
-	const uint8_t* sent_packet_dst_mac_addr = packet_ethernet_get_dst_mac_addr(sent_packet_ether_header);
-
 	struct arphdr* sent_packet_arp_header = packet_arp_get_header(sent_packet_data);
-	uint32_t sent_packet_arp_unknown_ip = packet_arp_get_target_protocol_address(sent_packet_arp_header);
+	uint32_t sent_packet_arp_target_ip = packet_arp_get_target_protocol_address(sent_packet_arp_header);
+
+	struct arphdr* received_packet_arp_header = packet_arp_get_header(received_packet_data);
+	uint32_t received_packet_arp_sender_ip = packet_arp_get_sender_protocol_address(received_packet_arp_header);
 	
-	if (!packet_arp_get_sender_protocol_address(sent_packet_arp_header) == sent_packet_arp_unknown_ip) {
+	if (received_packet_arp_sender_ip != sent_packet_arp_target_ip) {
 		uint8_t ip_bufA[32];
 		uint8_t ip_bufB[32];
-		packet_ip_address_to_str(packet_arp_get_sender_protocol_address(sent_packet_arp_header), ip_bufA);
-		packet_ip_address_to_str(sent_packet_arp_unknown_ip, ip_bufB);
+		packet_ip_address_to_str(received_packet_arp_sender_ip, ip_bufA);
+		packet_ip_address_to_str(sent_packet_arp_target_ip, ip_bufB);
 		printf("not response, skipping (want %s but got %s)\n", ip_bufB, ip_bufA);
 		//packet_print(response);
 		

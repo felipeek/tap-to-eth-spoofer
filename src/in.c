@@ -7,6 +7,12 @@
 
 #define ETH_INTERFACE_IP "192.168.0.2"
 
+// This is the spoofed mac address that is injected in the packets when they are sent to the eth interface
+// Linux allows us to write arbitrary mac addresses and, when reading the interface, it is also possible to see all traffic,
+// even if the dst mac address of the packets are different from the mac address of the interface
+// -> If this is set to the same mac address of the eth interface, then the mac address of the packets will not be spoofed
+static uint8_t SPOOFED_SRC_MAC_ADDRESS[6] = { 0x54, 0xb2, 0x03, 0x04, 0x77, 0xe0 };
+
 static uint8_t* in_spoof_packet_arp(const uint8_t* data, int32_t length, int32_t* new_length) {
 	printf("Spoofing ARP packet's MAC and IP...\n");
 
@@ -24,9 +30,8 @@ static uint8_t* in_spoof_packet_arp(const uint8_t* data, int32_t length, int32_t
 	struct arphdr* arp_header = packet_arp_get_header(new_packet);
 
 	// todo: get this mac automatically , this is from eth (eno1)
-	char new_spoofed_src_mac[6] = { 0x54, 0xb2, 0x03, 0x04, 0x77, 0xe3 };
-	packet_arp_set_sender_hw_address(arp_header, new_spoofed_src_mac);
-	packet_ethernet_set_src_mac_addr(ether_header, new_spoofed_src_mac);
+	packet_arp_set_sender_hw_address(arp_header, SPOOFED_SRC_MAC_ADDRESS);
+	packet_ethernet_set_src_mac_addr(ether_header, SPOOFED_SRC_MAC_ADDRESS);
 
 	//unsigned char new_spoofed_src_ip_arr[4] = { 192, 168, 0, 2 };
 	unsigned char new_spoofed_src_ip_arr[4];
