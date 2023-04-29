@@ -66,28 +66,28 @@ int tap_init() {
 
 	// Prepare to set tap interface IP
 	memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(TAP_INTERFACE_IP);
-    memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = inet_addr(TAP_INTERFACE_IP);
+	memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
 
 	// Set tap interface IP
-    if (ioctl(sockfd, SIOCSIFADDR, &ifr) < 0) {
-        perror("fail to set tap interface IP (ioctl)");
-        close(fd);
+	if (ioctl(sockfd, SIOCSIFADDR, &ifr) < 0) {
+		perror("fail to set tap interface IP (ioctl)");
+		close(fd);
 		close(sockfd);
 		return -1;
-    }
+	}
 
 	ifr.ifr_ifru.ifru_hwaddr.sa_family = 1; // eq to ARPHRD_ETHER , not sure where is this is documented...
 	memcpy(ifr.ifr_ifru.ifru_hwaddr.sa_data, TAP_MAC_ADDR, sizeof(TAP_MAC_ADDR));
 
 	// Set tap interface MAC address
-    if (ioctl(sockfd, SIOCSIFHWADDR, &ifr) < 0) {
-        perror("fail to set tap interface MAC addr (ioctl)");
-        close(fd);
+	if (ioctl(sockfd, SIOCSIFHWADDR, &ifr) < 0) {
+		perror("fail to set tap interface MAC addr (ioctl)");
+		close(fd);
 		close(sockfd);
 		return -1;
-    }
+	}
 
 	close(sockfd);
 	return fd;

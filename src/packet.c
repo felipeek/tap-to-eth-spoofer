@@ -75,7 +75,7 @@ uint32_t packet_ip_get_dst_ip(const struct iphdr* ip_header) {
 }
 
 uint32_t packet_ip_address_str_to_uint32(const uint8_t* ip) {
-    return inet_addr(ip);
+	return inet_addr(ip);
 }
 
 void packet_ip_address_str_to_buf(const uint8_t* ip, char bytes[4]) {
