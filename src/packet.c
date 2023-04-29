@@ -1,6 +1,7 @@
 #include "packet.h"
 #include <stdio.h>
 #include <memory.h>
+#include <arpa/inet.h>
 
 #define INVERT_ENDIANESS_16(X) ((X >> 8) | (X << 8))
 
@@ -73,12 +74,25 @@ uint32_t packet_ip_get_dst_ip(const struct iphdr* ip_header) {
 	return ip_header->daddr;
 }
 
-void packet_ip_address_to_str(uint32_t ip, char buf[32]) {
-	unsigned char bytes[4];
+uint32_t packet_ip_address_str_to_uint32(const uint8_t* ip) {
+    return inet_addr(ip);
+}
+
+void packet_ip_address_str_to_buf(const uint8_t* ip, char bytes[4]) {
+	uint32_t ip_uint32 = packet_ip_address_str_to_uint32(ip);
+	return packet_ip_address_to_buf(ip_uint32, bytes);
+}
+
+void packet_ip_address_to_buf(uint32_t ip, char bytes[4]) {
 	bytes[0] = ip & 0xFF;
 	bytes[1] = (ip >> 8) & 0xFF;
 	bytes[2] = (ip >> 16) & 0xFF;
 	bytes[3] = (ip >> 24) & 0xFF;
+}
+
+void packet_ip_address_to_str(uint32_t ip, char buf[32]) {
+	unsigned char bytes[4];
+	packet_ip_address_to_buf(ip, bytes);
 	sprintf(buf, "%d.%d.%d.%d", bytes[0], bytes[1], bytes[2], bytes[3]);
 }
 
