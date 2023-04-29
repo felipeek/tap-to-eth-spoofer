@@ -106,15 +106,14 @@ int tap_send(Tap_Descriptor* tap, const uint8_t* packet_data, int32_t packet_siz
 	return 0;
 }
 
-int tap_receive(Tap_Descriptor* tap, uint8_t* buffer, uint32_t buffer_size, int32_t* received_packet_size) {
+int32_t tap_receive(Tap_Descriptor* tap, uint8_t* buffer, uint32_t buffer_size) {
 	int32_t bytes_read = read(tap->fd, buffer, buffer_size);
 	if (bytes_read < 0) {
 		perror("fail to read packets from tap interface (read)");
 		return -1;
 	}
 
-	*received_packet_size = bytes_read;
-	return 0;
+	return bytes_read;
 }
 
 void tap_release(Tap_Descriptor* tap) {

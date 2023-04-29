@@ -6,8 +6,8 @@
 #include "packet.h"
 #include "tap.h"
 
-static uint8_t* out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t sent_packet_length,
-		const uint8_t* received_packet_data, int32_t received_packet_length, int32_t* new_length) {
+static int32_t out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t sent_packet_length,
+		const uint8_t* received_packet_data, int32_t received_packet_length, uint8_t* buffer) {
 
 	struct arphdr* sent_packet_arp_header = packet_arp_get_header(sent_packet_data);
 	uint32_t sent_packet_arp_target_ip = packet_arp_get_target_protocol_address(sent_packet_arp_header);
@@ -23,21 +23,16 @@ static uint8_t* out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t se
 		printf("not response, skipping (want %s but got %s)\n", ip_bufB, ip_bufA);
 		//packet_print(response);
 		
-		return NULL;
+		return -1;
 	}
 	
 	printf("Found response!\n");
 
 	// Clone original packet
-	uint8_t* new_packet = malloc(received_packet_length);
-	if (new_packet == NULL) {
-		perror("unable to allocate memory for new packet (malloc)");
-		return NULL;
-	}
-	memcpy(new_packet, received_packet_data, received_packet_length);
+	memcpy(buffer, received_packet_data, received_packet_length);
 
-	struct ether_header* ether_header = packet_ethernet_get_header(new_packet);
-	struct arphdr* arp_header = packet_arp_get_header(new_packet);
+	struct ether_header* ether_header = packet_ethernet_get_header(buffer);
+	struct arphdr* arp_header = packet_arp_get_header(buffer);
 
 	// TODO: this should have same mac as the tap interface, make it automatic
 	char* new_spoofed_dst_mac = TAP_MAC_ADDR;
@@ -54,12 +49,11 @@ static uint8_t* out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t se
 	packet_ip_address_to_str(new_spoofed_dst_ip, ip_buf);
 	printf("new spoofed IP: %s\n", ip_buf);
 
-	*new_length = received_packet_length;
-	return new_packet;
+	return received_packet_length;
 }
 
-uint8_t* out_spoof_packet(const uint8_t* sent_packet_data, int32_t sent_packet_length,
-		const uint8_t* received_packet_data, int32_t received_packet_length, int32_t* new_length) {
+int32_t out_spoof_packet(const uint8_t* sent_packet_data, int32_t sent_packet_length,
+		const uint8_t* received_packet_data, int32_t received_packet_length, uint8_t* buffer) {
 	struct ether_header* sent_packet_ether_header = packet_ethernet_get_header(sent_packet_data);
 	uint16_t sent_packet_ether_type = packet_ethernet_get_type(sent_packet_ether_header);
 	
@@ -68,16 +62,16 @@ uint8_t* out_spoof_packet(const uint8_t* sent_packet_data, int32_t sent_packet_l
 
 	// If the packets have different type, this is not our response.
 	if (sent_packet_ether_type != received_packet_ether_type) {
-		return NULL;
+		return -1;
 	}
 
 	switch (received_packet_ether_type) {
 		case ETHERTYPE_ARP: {
 			return out_spoof_packet_arp(sent_packet_data, sent_packet_length, received_packet_data,
-				received_packet_length, new_length);
+				received_packet_length, buffer);
 		} break;
 	}
 
 	printf("Cannot handle ethertype - dropping packet.\n");
-	return NULL;
+	return -1;
 }

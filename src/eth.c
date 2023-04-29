@@ -58,7 +58,7 @@ int eth_send(Eth_Descriptor* eth, const uint8_t* packet_data, int32_t packet_siz
 	return 0;
 }
 
-int eth_receive(Eth_Descriptor* eth, uint8_t* buffer, uint32_t buffer_size, int32_t* received_packet_size) {
+int32_t eth_receive(Eth_Descriptor* eth, uint8_t* buffer, uint32_t buffer_size) {
 	// Fill out the sockaddr_ll struct
 	struct sockaddr_ll sock_addr;
 	memset(&sock_addr, 0, sizeof(sock_addr));
@@ -78,8 +78,7 @@ int eth_receive(Eth_Descriptor* eth, uint8_t* buffer, uint32_t buffer_size, int3
 		return -1;
 	}
 
-	*received_packet_size = bytes_received;
-	return 0;
+	return bytes_received;
 }
 
 void eth_release(Eth_Descriptor* eth) {

@@ -23,7 +23,10 @@
 
 #define IO_BUFFER_SIZE 2048
 
-static char TAP_IN_BUFFER[IO_BUFFER_SIZE];
+static char TAP_IN_BUFFER[IO_BUFFER_SIZE];	// client -> tap interface
+static char ETH_OUT_BUFFER[IO_BUFFER_SIZE]; // tap interface -> *spoofing* -> eth interface
+static char ETH_IN_BUFFER[IO_BUFFER_SIZE];  // eth interface -> remote -> eth interface
+static char TAP_OUT_BUFFER[IO_BUFFER_SIZE]; // eth interface -> *reverse-spoofing* -> client
 
 int main(int argc, char *argv[]) {
 	Eth_Descriptor eth;
@@ -43,8 +46,8 @@ int main(int argc, char *argv[]) {
 
 	// Read packets from TAP device
 	while (1) {
-		int32_t tap_in_bytes_read;
-		if (tap_receive(&tap, TAP_IN_BUFFER, IO_BUFFER_SIZE, &tap_in_bytes_read)) {
+		int32_t tap_in_bytes_read = tap_receive(&tap, TAP_IN_BUFFER, IO_BUFFER_SIZE);
+		if (tap_in_bytes_read < 0) {
 			fprintf(stderr, "fail to read packets from tap interface\n");
 			tap_release(&tap);
 			eth_release(&eth);
@@ -53,15 +56,14 @@ int main(int argc, char *argv[]) {
 
 		packet_print(TAP_IN_BUFFER);
 
-		int32_t spoofed_in_packet_len;
-		uint8_t* spoofed_in_packet_data = in_spoof_packet(TAP_IN_BUFFER, tap_in_bytes_read, &spoofed_in_packet_len);
+		int32_t spoofed_in_packet_size = in_spoof_packet(TAP_IN_BUFFER, tap_in_bytes_read, ETH_OUT_BUFFER);
 
-		if (spoofed_in_packet_data == NULL) {
+		if (spoofed_in_packet_size < 0) {
 			// packet was ignored.
 			continue;
 		}
 
-		if (eth_send(&eth, spoofed_in_packet_data, spoofed_in_packet_len) < 0) {
+		if (eth_send(&eth, ETH_OUT_BUFFER, spoofed_in_packet_size) < 0) {
 			fprintf(stderr, "unable to direct spoofed packet to eth interface");
 			tap_release(&tap);
 			eth_release(&eth);
@@ -69,35 +71,33 @@ int main(int argc, char *argv[]) {
 		}
 
 		int32_t spoofed_out_packet_len;
-		uint8_t* spoofed_out_packet_data;
 		for (;;) {
 			// Question: can we lose packets with this approach?
 			// i.e. start reading only after we already dispatched?
 			// Or are packets kept in a socket queue?
 			// If yes what is the queue capacity?
-			uint8_t receive_buffer[2048];
-			int32_t received_packet_size;
-			if (eth_receive(&eth, receive_buffer, 2048, &received_packet_size)) {
+			int32_t received_packet_size = eth_receive(&eth, ETH_IN_BUFFER, IO_BUFFER_SIZE);
+			if (received_packet_size < 0) {
 				fprintf(stderr, "unable to receive packet from eth interface\n");
 				tap_release(&tap);
 				eth_release(&eth);
 				return -1;
 			}
 
-			spoofed_out_packet_data = out_spoof_packet(spoofed_in_packet_data, spoofed_in_packet_len,
-				receive_buffer, received_packet_size, &spoofed_out_packet_len);
+			spoofed_out_packet_len = out_spoof_packet(ETH_OUT_BUFFER, spoofed_in_packet_size,
+				ETH_IN_BUFFER, received_packet_size, TAP_OUT_BUFFER);
 			
-			if (spoofed_out_packet_data != NULL) {
+			if (spoofed_out_packet_len >= 0) {
 				// response was captured
 				break;
 			}
 		}
 
 		printf("Printing spoofed response package.\n");
-		packet_print(spoofed_out_packet_data);
+		packet_print(TAP_OUT_BUFFER);
 
 		// Write the packet to the tap interface
-		if (tap_send(&tap, spoofed_out_packet_data, spoofed_in_packet_len)) {
+		if (tap_send(&tap, TAP_OUT_BUFFER, spoofed_out_packet_len)) {
 			fprintf(stderr, "unable to write spoofed packet to tap interface\n");
 			tap_release(&tap);
 			eth_release(&eth);
