@@ -35,6 +35,8 @@ static char TAP_OUT_BUFFER[IO_BUFFER_SIZE]; // eth interface -> *reverse-spoofin
 int main(int argc, char *argv[]) {
 	Eth_Descriptor eth;
 	Tap_Descriptor tap;
+	In_Spoofing_Descriptor isd;
+	Out_Spoofing_Descriptor osd;
 	struct ifreq ifr;
 
 	if (tap_init(&tap)) {
@@ -48,6 +50,16 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
+	uint32_t in_spoof_ip_address = eth_get_ip_address(&eth);
+	uint8_t in_spoof_mac_address[6];
+	eth_get_mac_address(&eth, in_spoof_mac_address);
+	in_spoof_init(&isd, in_spoof_ip_address, in_spoof_mac_address);
+
+	int32_t out_spoof_ip_address = tap_get_ip_address(&tap);
+	int8_t out_spoof_mac_address[6];
+	tap_get_mac_address(&tap, out_spoof_mac_address);
+	out_spoof_init(&osd, out_spoof_ip_address, out_spoof_mac_address);
+
 	// Read packets from TAP device
 	while (1) {
 		int32_t tap_in_bytes_read = tap_receive(&tap, TAP_IN_BUFFER, IO_BUFFER_SIZE);
@@ -60,7 +72,7 @@ int main(int argc, char *argv[]) {
 
 		packet_print(TAP_IN_BUFFER);
 
-		int32_t spoofed_in_packet_size = in_spoof_packet(TAP_IN_BUFFER, tap_in_bytes_read, ETH_OUT_BUFFER);
+		int32_t spoofed_in_packet_size = in_spoof_packet(&isd, TAP_IN_BUFFER, tap_in_bytes_read, ETH_OUT_BUFFER);
 
 		if (spoofed_in_packet_size < 0) {
 			// packet was ignored.
@@ -88,7 +100,7 @@ int main(int argc, char *argv[]) {
 				return -1;
 			}
 
-			spoofed_out_packet_len = out_spoof_packet(ETH_OUT_BUFFER, spoofed_in_packet_size,
+			spoofed_out_packet_len = out_spoof_packet(&osd, ETH_OUT_BUFFER, spoofed_in_packet_size,
 				ETH_IN_BUFFER, received_packet_size, TAP_OUT_BUFFER);
 			
 			if (spoofed_out_packet_len >= 0) {

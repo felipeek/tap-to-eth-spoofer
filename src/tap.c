@@ -14,6 +14,12 @@
 #include <assert.h>
 
 #include "tap.h"
+#include "util.h"
+
+#define TAP_DEVICE_FILE "/dev/net/tun"
+#define TAP_INTERFACE_NAME "tap0"
+#define TAP_INTERFACE_IP "192.168.42.2"
+static char TAP_MAC_ADDR[6] = { 0x82, 0xa2, 0x17, 0x43, 0x15, 0xef };
 
 int tap_init(Tap_Descriptor* tap) {
 	struct ifreq ifr;
@@ -118,4 +124,12 @@ int32_t tap_receive(Tap_Descriptor* tap, uint8_t* buffer, uint32_t buffer_size) 
 
 void tap_release(Tap_Descriptor* tap) {
 	close(tap->fd);
+}
+
+uint32_t tap_get_ip_address(Tap_Descriptor* tap) {
+	return util_ip_address_str_to_uint32(TAP_INTERFACE_IP);
+}
+
+void tap_get_mac_address(Tap_Descriptor* tap, uint8_t mac_address[6]) {
+	memcpy(mac_address, TAP_MAC_ADDR, 6);
 }

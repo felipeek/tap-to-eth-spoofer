@@ -7,7 +7,12 @@
 #include "tap.h"
 #include "util.h"
 
-static int32_t out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t sent_packet_length,
+void out_spoof_init(Out_Spoofing_Descriptor* osd, uint32_t spoof_ip_address, uint8_t spoof_mac_address[6]) {
+	osd->spoof_ip_address = spoof_ip_address;
+	memcpy(osd->spoof_mac_address, spoof_mac_address, 6);
+}
+
+static int32_t out_spoof_packet_arp(Out_Spoofing_Descriptor* osd, const uint8_t* sent_packet_data, int32_t sent_packet_length,
 		const uint8_t* received_packet_data, int32_t received_packet_length, uint8_t* buffer) {
 
 	struct arphdr* sent_packet_arp_header = packet_arp_get_header(sent_packet_data);
@@ -36,14 +41,11 @@ static int32_t out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t sen
 	struct arphdr* arp_header = packet_arp_get_header(buffer);
 
 	// TODO: this should have same mac as the tap interface, make it automatic
-	char* new_spoofed_dst_mac = TAP_MAC_ADDR;
+	char* new_spoofed_dst_mac = osd->spoof_mac_address;
 	packet_arp_set_target_hw_address(arp_header, new_spoofed_dst_mac);
 	packet_ethernet_set_dst_mac_addr(ether_header, new_spoofed_dst_mac);
 
-	unsigned char new_spoofed_dst_ip_arr[4];
-	util_ip_address_str_to_buf(TAP_INTERFACE_IP, new_spoofed_dst_ip_arr);
-	uint32_t new_spoofed_dst_ip = new_spoofed_dst_ip_arr[0] | (new_spoofed_dst_ip_arr[1] << 8) |
-		(new_spoofed_dst_ip_arr[2] << 16) | (new_spoofed_dst_ip_arr[3] << 24);
+	uint32_t new_spoofed_dst_ip = osd->spoof_ip_address;
 	packet_arp_set_target_protocol_address(arp_header, new_spoofed_dst_ip);
 
 	uint8_t ip_buf[32];
@@ -53,7 +55,7 @@ static int32_t out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t sen
 	return received_packet_length;
 }
 
-int32_t out_spoof_packet(const uint8_t* sent_packet_data, int32_t sent_packet_length,
+int32_t out_spoof_packet(Out_Spoofing_Descriptor* osd, const uint8_t* sent_packet_data, int32_t sent_packet_length,
 		const uint8_t* received_packet_data, int32_t received_packet_length, uint8_t* buffer) {
 	struct ether_header* sent_packet_ether_header = packet_ethernet_get_header(sent_packet_data);
 	uint16_t sent_packet_ether_type = packet_ethernet_get_type(sent_packet_ether_header);
@@ -68,7 +70,7 @@ int32_t out_spoof_packet(const uint8_t* sent_packet_data, int32_t sent_packet_le
 
 	switch (received_packet_ether_type) {
 		case ETHERTYPE_ARP: {
-			return out_spoof_packet_arp(sent_packet_data, sent_packet_length, received_packet_data,
+			return out_spoof_packet_arp(osd, sent_packet_data, sent_packet_length, received_packet_data,
 				received_packet_length, buffer);
 		} break;
 	}

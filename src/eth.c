@@ -117,3 +117,11 @@ int32_t eth_receive(Eth_Descriptor* eth, uint8_t* buffer, uint32_t buffer_size) 
 void eth_release(Eth_Descriptor* eth) {
 	close(eth->sockfd);
 }
+
+uint32_t eth_get_ip_address(Eth_Descriptor* eth) {
+	return eth->ip_address;
+}
+
+void eth_get_mac_address(Eth_Descriptor* eth, uint8_t mac_address[6]) {
+	memcpy(mac_address, eth->mac_address, 6);
+}
