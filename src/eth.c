@@ -98,10 +98,6 @@ int32_t eth_receive(Eth_Descriptor* eth, uint8_t* buffer, uint32_t buffer_size) 
 	sock_addr.sll_family = AF_PACKET;
 	sock_addr.sll_ifindex = eth->ifindex;
 	sock_addr.sll_halen = ETH_ALEN;
-	
-	// todo: TEST
-	//char new_spoofed_src_mac[6] = { 0x54, 0xb2, 0x03, 0x04, 0x77, 0xe3 };
-	//memcpy(sock_addr.sll_addr, new_spoofed_src_mac, ETH_ALEN); // need to bind?
 
 	socklen_t sock_addr_len = sizeof(sock_addr);
 

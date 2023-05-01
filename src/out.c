@@ -40,7 +40,6 @@ static int32_t out_spoof_packet_arp(Out_Spoofing_Descriptor* osd, const uint8_t*
 	struct ether_header* ether_header = packet_ethernet_get_header(buffer);
 	struct arphdr* arp_header = packet_arp_get_header(buffer);
 
-	// TODO: this should have same mac as the tap interface, make it automatic
 	char* new_spoofed_dst_mac = osd->spoof_mac_address;
 	packet_arp_set_target_hw_address(arp_header, new_spoofed_dst_mac);
 	packet_ethernet_set_dst_mac_addr(ether_header, new_spoofed_dst_mac);
