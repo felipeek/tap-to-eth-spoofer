@@ -18,6 +18,7 @@
 
 #include "eth.h"
 #include "packet.h"
+#include "util.h"
 
 #define ETH_INTERFACE_NAME "eno1"
 
@@ -30,6 +31,38 @@ int eth_init(Eth_Descriptor* eth) {
 	}
 
 	eth->ifindex = if_nametoindex(ETH_INTERFACE_NAME);
+	
+	struct ifreq ifr;
+	strncpy(ifr.ifr_ifrn.ifrn_name, ETH_INTERFACE_NAME, IFNAMSIZ);
+	
+	// Get eth interface MAC address
+	if (ioctl(eth->sockfd, SIOCGIFHWADDR, &ifr) < 0) {
+		perror("fail to get eth interface MAC addr (ioctl)");
+		close(eth->sockfd);
+		return -1;
+	}
+	memcpy(eth->mac_address, ifr.ifr_ifru.ifru_hwaddr.sa_data, 6);
+
+	// Get eth interface IP address
+	strncpy(ifr.ifr_ifrn.ifrn_name, ETH_INTERFACE_NAME, IFNAMSIZ);
+	ifr.ifr_ifru.ifru_addr.sa_family = AF_INET;
+
+	if (ioctl(eth->sockfd, SIOCGIFADDR, &ifr) < 0) {
+		perror("fail to get eth interface IP addr (ioctl)");
+		close(eth->sockfd);
+		return -1;
+	}
+	eth->ip_address = ((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr.s_addr;
+
+
+	char mac_buf[32];
+	char ip_buf[32];
+	util_mac_address_to_str(eth->mac_address, mac_buf);
+	util_ip_address_to_str(eth->ip_address, ip_buf);
+	printf("Successfully loaded interface [%s] with:\n", ETH_INTERFACE_NAME);
+	printf("\t- MAC Address: [%s]\n", mac_buf);
+	printf("\t- IP Address: [%s]\n", ip_buf);
+	
 	return 0;
 }
 

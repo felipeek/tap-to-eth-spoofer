@@ -1,7 +1,7 @@
-#include "packet.h"
 #include <stdio.h>
 #include <memory.h>
-#include <arpa/inet.h>
+#include "packet.h"
+#include "util.h"
 
 #define INVERT_ENDIANESS_16(X) ((X >> 8) | (X << 8))
 
@@ -52,10 +52,13 @@ void packet_ethernet_print(const struct ether_header* ether_header) {
 		case ETHERTYPE_LOOPBACK: printf("\t- Type:\t[LOOPBACK]\n"); break;
 	}
 
-	printf("\t- Src Mac:\t[%02x : %02x : %02x : %02x : %02x : %02x]\n",
-		mac_src_addr[0], mac_src_addr[1], mac_src_addr[2], mac_src_addr[3], mac_src_addr[4], mac_src_addr[5]);
-	printf("\t- Dst MAC:\t[%02x : %02x : %02x : %02x : %02x : %02x]\n",
-		mac_dst_addr[0], mac_dst_addr[1], mac_dst_addr[2], mac_dst_addr[3], mac_dst_addr[4], mac_dst_addr[5]);
+	uint8_t mac_src_addr_str[32];
+	uint8_t mac_dst_addr_str[32];
+
+	util_mac_address_to_str(mac_src_addr, mac_src_addr_str);
+	util_mac_address_to_str(mac_dst_addr, mac_dst_addr_str);
+	printf("\t- Src Mac:\t[%s]\n", mac_src_addr_str);
+	printf("\t- Dst Mac:\t[%s]\n", mac_dst_addr_str);
 }
 
 struct iphdr* packet_ip_get_header(const unsigned char* packet) {
@@ -74,36 +77,14 @@ uint32_t packet_ip_get_dst_ip(const struct iphdr* ip_header) {
 	return ip_header->daddr;
 }
 
-uint32_t packet_ip_address_str_to_uint32(const uint8_t* ip) {
-	return inet_addr(ip);
-}
-
-void packet_ip_address_str_to_buf(const uint8_t* ip, char bytes[4]) {
-	uint32_t ip_uint32 = packet_ip_address_str_to_uint32(ip);
-	return packet_ip_address_to_buf(ip_uint32, bytes);
-}
-
-void packet_ip_address_to_buf(uint32_t ip, char bytes[4]) {
-	bytes[0] = ip & 0xFF;
-	bytes[1] = (ip >> 8) & 0xFF;
-	bytes[2] = (ip >> 16) & 0xFF;
-	bytes[3] = (ip >> 24) & 0xFF;
-}
-
-void packet_ip_address_to_str(uint32_t ip, char buf[32]) {
-	unsigned char bytes[4];
-	packet_ip_address_to_buf(ip, bytes);
-	sprintf(buf, "%d.%d.%d.%d", bytes[0], bytes[1], bytes[2], bytes[3]);
-}
-
 void packet_ip_print(const struct iphdr* ip_header) {
 	uint32_t src_ip = packet_ip_get_src_ip(ip_header);
 	uint32_t dst_ip = packet_ip_get_dst_ip(ip_header);
 
 	char src_ip_buf[32];
 	char dst_ip_buf[32];
-	packet_ip_address_to_str(src_ip, src_ip_buf);
-	packet_ip_address_to_str(dst_ip, dst_ip_buf);
+	util_ip_address_to_str(src_ip, src_ip_buf);
+	util_ip_address_to_str(dst_ip, dst_ip_buf);
 	
 	printf("IP Header\n");
 	printf("\t- Src IP:\t[%s]\n", src_ip_buf);
@@ -204,8 +185,8 @@ void packet_arp_print(const struct arphdr* arp_header) {
 
 	char sender_protocol_buf[32];
 	char target_protocol_buf[32];
-	packet_ip_address_to_str(sender_protocol_addr, sender_protocol_buf);
-	packet_ip_address_to_str(target_protocol_addr, target_protocol_buf);
+	util_ip_address_to_str(sender_protocol_addr, sender_protocol_buf);
+	util_ip_address_to_str(target_protocol_addr, target_protocol_buf);
 
 	printf("\t- Sender Hardware Addr:\t[%02x : %02x : %02x : %02x : %02x : %02x]\n",
 		sender_hardware_addr[0], sender_hardware_addr[1], sender_hardware_addr[2], sender_hardware_addr[3], sender_hardware_addr[4], sender_hardware_addr[5]);

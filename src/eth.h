@@ -3,6 +3,8 @@
 typedef struct {
 	int sockfd;
 	int ifindex;
+	uint8_t mac_address[6];
+	uint32_t ip_address;
 } Eth_Descriptor;
 
 int eth_init(Eth_Descriptor* eth);

@@ -3,6 +3,7 @@
 #include <memory.h>
 #include "in.h"
 #include "packet.h"
+#include "util.h"
 #include "tap.h"
 
 #define ETH_INTERFACE_IP "192.168.0.2"
@@ -30,14 +31,14 @@ static int32_t in_spoof_packet_arp(const uint8_t* data, int32_t length, uint8_t*
 
 	//unsigned char new_spoofed_src_ip_arr[4] = { 192, 168, 0, 2 };
 	unsigned char new_spoofed_src_ip_arr[4];
-	packet_ip_address_str_to_buf(ETH_INTERFACE_IP, new_spoofed_src_ip_arr);
+	util_ip_address_str_to_buf(ETH_INTERFACE_IP, new_spoofed_src_ip_arr);
 	uint32_t new_spoofed_src_ip = new_spoofed_src_ip_arr[0] | (new_spoofed_src_ip_arr[1] << 8) |
 		(new_spoofed_src_ip_arr[2] << 16) | (new_spoofed_src_ip_arr[3] << 24);
 
 	packet_arp_set_sender_protocol_address(arp_header, new_spoofed_src_ip);
 
 	uint8_t ip_buf[32];
-	packet_ip_address_to_str(new_spoofed_src_ip, ip_buf);
+	util_ip_address_to_str(new_spoofed_src_ip, ip_buf);
 	printf("new spoofed IP: %s\n", ip_buf);
 
 	return length;

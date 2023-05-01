@@ -1,3 +1,7 @@
+// Create long-lived tap interface
+// sudo ip tuntap add tap0 mode tap
+// sudo ip link set tap0 up
+
 #define _BSD_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -109,7 +113,3 @@ int main(int argc, char *argv[]) {
 	eth_release(&eth);
 	return 0;
 }
-
-
-// force all traffic to pudim.com.br to go through tap0
-// sudo ip route add 54.207.20.104 dev tap0

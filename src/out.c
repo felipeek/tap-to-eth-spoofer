@@ -5,6 +5,7 @@
 #include "out.h"
 #include "packet.h"
 #include "tap.h"
+#include "util.h"
 
 static int32_t out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t sent_packet_length,
 		const uint8_t* received_packet_data, int32_t received_packet_length, uint8_t* buffer) {
@@ -18,8 +19,8 @@ static int32_t out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t sen
 	if (received_packet_arp_sender_ip != sent_packet_arp_target_ip) {
 		uint8_t ip_bufA[32];
 		uint8_t ip_bufB[32];
-		packet_ip_address_to_str(received_packet_arp_sender_ip, ip_bufA);
-		packet_ip_address_to_str(sent_packet_arp_target_ip, ip_bufB);
+		util_ip_address_to_str(received_packet_arp_sender_ip, ip_bufA);
+		util_ip_address_to_str(sent_packet_arp_target_ip, ip_bufB);
 		printf("not response, skipping (want %s but got %s)\n", ip_bufB, ip_bufA);
 		//packet_print(response);
 		
@@ -40,13 +41,13 @@ static int32_t out_spoof_packet_arp(const uint8_t* sent_packet_data, int32_t sen
 	packet_ethernet_set_dst_mac_addr(ether_header, new_spoofed_dst_mac);
 
 	unsigned char new_spoofed_dst_ip_arr[4];
-	packet_ip_address_str_to_buf(TAP_INTERFACE_IP, new_spoofed_dst_ip_arr);
+	util_ip_address_str_to_buf(TAP_INTERFACE_IP, new_spoofed_dst_ip_arr);
 	uint32_t new_spoofed_dst_ip = new_spoofed_dst_ip_arr[0] | (new_spoofed_dst_ip_arr[1] << 8) |
 		(new_spoofed_dst_ip_arr[2] << 16) | (new_spoofed_dst_ip_arr[3] << 24);
 	packet_arp_set_target_protocol_address(arp_header, new_spoofed_dst_ip);
 
 	uint8_t ip_buf[32];
-	packet_ip_address_to_str(new_spoofed_dst_ip, ip_buf);
+	util_ip_address_to_str(new_spoofed_dst_ip, ip_buf);
 	printf("new spoofed IP: %s\n", ip_buf);
 
 	return received_packet_length;
