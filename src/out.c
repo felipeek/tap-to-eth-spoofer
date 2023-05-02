@@ -41,11 +41,11 @@ static int32_t out_spoof_packet_arp(Out_Spoofing_Descriptor* osd, const uint8_t*
 	struct arphdr* arp_header = packet_arp_get_header(buffer);
 
 	char* new_spoofed_dst_mac = osd->spoof_mac_address;
-	packet_arp_set_target_hw_address(arp_header, new_spoofed_dst_mac);
-	packet_ethernet_set_dst_mac_addr(ether_header, new_spoofed_dst_mac);
+	//packet_arp_set_target_hw_address(arp_header, new_spoofed_dst_mac);
+	//packet_ethernet_set_dst_mac_addr(ether_header, new_spoofed_dst_mac);
 
 	uint32_t new_spoofed_dst_ip = osd->spoof_ip_address;
-	packet_arp_set_target_protocol_address(arp_header, new_spoofed_dst_ip);
+	//packet_arp_set_target_protocol_address(arp_header, new_spoofed_dst_ip);
 
 	uint8_t ip_buf[32];
 	util_ip_address_to_str(new_spoofed_dst_ip, ip_buf);

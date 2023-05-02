@@ -12,14 +12,21 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <assert.h>
+#include <net/route.h>
+#include <errno.h>
 
 #include "tap.h"
 #include "util.h"
 
 #define TAP_DEVICE_FILE "/dev/net/tun"
 #define TAP_INTERFACE_NAME "tap0"
-#define TAP_INTERFACE_IP "192.168.42.2"
-static char TAP_MAC_ADDR[6] = { 0x82, 0xa2, 0x17, 0x43, 0x15, 0xef };
+
+// for now, let's make the tap interface be in the same network as eth
+// for that, it has to have a different IP within the same subnet, and also same default gateway
+#define TAP_INTERFACE_IP "192.168.0.15"
+#define TAP_INTERFACE_NETMASK "255.255.255.0"
+#define TAP_DEFAULT_GATEWAY_IP "192.168.0.1"
+static char TAP_MAC_ADDR[6] = { 0x82, 0xa2, 0x17, 0x43, 0x15, 0xff };
 
 int tap_init(Tap_Descriptor* tap) {
 	struct ifreq ifr;
@@ -84,12 +91,67 @@ int tap_init(Tap_Descriptor* tap) {
 		return -1;
 	}
 
+	// Prepare to set tap interface netmask
+	struct sockaddr_in netmask;
+	memset(&netmask, 0, sizeof(struct sockaddr_in));
+	netmask.sin_family = AF_INET;
+	inet_aton(TAP_INTERFACE_NETMASK, &netmask.sin_addr);
+
+	// Set tap interface netmask
+	memcpy(&ifr.ifr_netmask, &netmask, sizeof(struct sockaddr_in));
+	if (ioctl(sockfd, SIOCSIFNETMASK, &ifr) < 0) {
+		perror("fail to set tap interface netmask (ioctl)");
+		close(tap->fd);
+		close(sockfd);
+		return -1;
+	}
+
 	ifr.ifr_ifru.ifru_hwaddr.sa_family = 1; // eq to ARPHRD_ETHER , not sure where is this is documented...
 	memcpy(ifr.ifr_ifru.ifru_hwaddr.sa_data, TAP_MAC_ADDR, sizeof(TAP_MAC_ADDR));
 
 	// Set tap interface MAC address
 	if (ioctl(sockfd, SIOCSIFHWADDR, &ifr) < 0) {
 		perror("fail to set tap interface MAC addr (ioctl)");
+		close(tap->fd);
+		close(sockfd);
+		return -1;
+	}
+
+	// Prepare to set tap interface default gateway
+	struct rtentry route;
+	memset(&route, 0, sizeof(struct rtentry));
+
+	// Set the destination address to 0.0.0.0 (default route)
+	route.rt_dst.sa_family = AF_INET;
+	route.rt_flags = RTF_GATEWAY;
+	route.rt_dev = TAP_INTERFACE_NAME;
+	
+	// Set the gateway IP address
+	struct sockaddr_in* gateway_addr = (struct sockaddr_in *)&route.rt_gateway;
+	gateway_addr->sin_family = AF_INET;
+	inet_aton(TAP_DEFAULT_GATEWAY_IP, &gateway_addr->sin_addr);
+
+	// Remove the route entry from the routing table
+    if (ioctl(sockfd, SIOCDELRT, &route) < 0) {
+		if (errno == ESRCH) {
+			printf("tap interface default gateway does not exist yet...\n");
+		} else {
+			perror("fail to delete tap interface default gateway (ioctl)");
+			close(tap->fd);
+			close(sockfd);
+			return -1;
+		}
+    }
+
+	// Set the metric to be very high, it must be higher than the default gateway of ETH,
+	// otherwise the kernel will use this default gateway when handling generic requests that are not bound to a specific interface
+	// @TODO: we should not rely on the metric, instead we should set the default gateway in a way that it is only used for
+	// requests that are made in the context of tap0.. Research how to do that.
+	route.rt_metric = 10000;
+
+	// Add the route to the routing table
+	if (ioctl(sockfd, SIOCADDRT, &route) < 0) {
+		perror("fail to set tap interface default gateway (ioctl)");
 		close(tap->fd);
 		close(sockfd);
 		return -1;

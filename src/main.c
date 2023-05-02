@@ -24,6 +24,7 @@
 #include "eth.h"
 #include "in.h"
 #include "out.h"
+#include "util.h"
 
 #define IO_BUFFER_SIZE 2048
 
@@ -52,8 +53,11 @@ int main(int argc, char *argv[]) {
 
 	uint32_t in_spoof_ip_address = eth_get_ip_address(&eth);
 	uint8_t in_spoof_mac_address[6];
+
+	uint32_t random_ip_address = util_ip_address_str_to_uint32("183.183.183.183");
 	eth_get_mac_address(&eth, in_spoof_mac_address);
 	in_spoof_init(&isd, in_spoof_ip_address, in_spoof_mac_address);
+	//in_spoof_init(&isd, random_ip_address, in_spoof_mac_address);
 
 	int32_t out_spoof_ip_address = tap_get_ip_address(&tap);
 	int8_t out_spoof_mac_address[6];

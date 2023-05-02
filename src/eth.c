@@ -15,6 +15,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#include <net/route.h>
 
 #include "eth.h"
 #include "packet.h"
@@ -54,14 +55,36 @@ int eth_init(Eth_Descriptor* eth) {
 	}
 	eth->ip_address = ((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr.s_addr;
 
+	// Get eth interface netmask
+	struct ifreq ifr_eth_netmask;
+	strncpy(ifr_eth_netmask.ifr_name, ETH_INTERFACE_NAME, IFNAMSIZ);
+	if (ioctl(eth->sockfd, SIOCGIFNETMASK, &ifr_eth_netmask) < 0) {
+		perror("fail to get eth interface netmask (ioctl)");
+		close(eth->sockfd);
+		return -1;
+	}
+	eth->netmask = ((struct sockaddr_in*)&ifr_eth_netmask.ifr_addr)->sin_addr.s_addr;
+
+	// Get eth interface default gateway
+	if (util_get_default_gateway(ETH_INTERFACE_NAME, &eth->default_gateway) < 0) {
+		fprintf(stderr, "fail to get default gateway of [%s]\n", ETH_INTERFACE_NAME);
+		close(eth->sockfd);
+		return -1;
+	}
 
 	char mac_buf[32];
 	char ip_buf[32];
+	char netmask_buf[32];
+	char default_gateway_buf[32];
 	util_mac_address_to_str(eth->mac_address, mac_buf);
 	util_ip_address_to_str(eth->ip_address, ip_buf);
+	util_ip_address_to_str(eth->netmask, netmask_buf);
+	util_ip_address_to_str(eth->default_gateway, default_gateway_buf);
 	printf("Successfully loaded interface [%s] with:\n", ETH_INTERFACE_NAME);
 	printf("\t- MAC Address: [%s]\n", mac_buf);
 	printf("\t- IP Address: [%s]\n", ip_buf);
+	printf("\t- Net Mask: [%s]\n", netmask_buf);
+	printf("\t- Default Gateway: [%s]\n", default_gateway_buf);
 	
 	return 0;
 }
@@ -120,4 +143,12 @@ uint32_t eth_get_ip_address(Eth_Descriptor* eth) {
 
 void eth_get_mac_address(Eth_Descriptor* eth, uint8_t mac_address[6]) {
 	memcpy(mac_address, eth->mac_address, 6);
+}
+
+uint32_t eth_get_netmask_address(Eth_Descriptor* eth) {
+	return eth->netmask;
+}
+
+uint32_t eth_get_default_gateway(Eth_Descriptor* eth) {
+	return eth->default_gateway;
 }

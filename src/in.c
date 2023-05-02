@@ -22,12 +22,12 @@ static int32_t in_spoof_packet_arp(In_Spoofing_Descriptor* isd, const uint8_t* d
 	const uint8_t* dst_mac = packet_ethernet_get_dst_mac_addr(ether_header);
 	struct arphdr* arp_header = packet_arp_get_header(buffer);
 
-	packet_arp_set_sender_hw_address(arp_header, isd->spoof_mac_address);
-	packet_ethernet_set_src_mac_addr(ether_header, isd->spoof_mac_address);
+	//packet_arp_set_sender_hw_address(arp_header, isd->spoof_mac_address);
+	//packet_ethernet_set_src_mac_addr(ether_header, isd->spoof_mac_address);
 
 	uint32_t new_spoofed_src_ip = isd->spoof_ip_address;
 
-	packet_arp_set_sender_protocol_address(arp_header, new_spoofed_src_ip);
+	//packet_arp_set_sender_protocol_address(arp_header, new_spoofed_src_ip);
 
 	uint8_t ip_buf[32];
 	util_ip_address_to_str(new_spoofed_src_ip, ip_buf);
