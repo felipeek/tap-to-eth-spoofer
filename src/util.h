@@ -1,6 +1,5 @@
 #pragma once
-
-#include <stdint.h>
+#include "common.h"
 
 uint32_t util_ip_address_str_to_uint32(const uint8_t* ip);
 void util_ip_address_str_to_buf(const uint8_t* ip, char bytes[4]);

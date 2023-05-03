@@ -1,21 +1,11 @@
 #define _BSD_SOURCE
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <linux/if_tun.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/socket.h>
 #include <netpacket/packet.h>
 #include <net/if.h>
-#include <net/if_arp.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <assert.h>
-#include <net/route.h>
 
 #include "eth.h"
 #include "packet.h"

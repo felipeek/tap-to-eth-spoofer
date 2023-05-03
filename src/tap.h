@@ -1,5 +1,5 @@
 #pragma once
-#include <stdint.h>
+#include "common.h"
 
 typedef struct {
 	int fd;

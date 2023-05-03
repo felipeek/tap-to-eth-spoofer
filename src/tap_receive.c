@@ -10,11 +10,18 @@ void* tap_receive_thread_proc(void* args) {
 	Tap_Receive_Thread_Args* rtargs = (Tap_Receive_Thread_Args*)args;
 	Eth_Descriptor* eth = rtargs->eth;
 	Tap_Descriptor* tap = rtargs->tap;
-	In_Spoofing_Descriptor* isd = rtargs->isd;
+	Eth_Spoofing_Descriptor* esd = rtargs->esd;
+	atomic_int* stop = rtargs->stop;
 
 	// Read packets from TAP device
 	for (;;) {
 		int32_t tap_in_bytes_read = tap_receive(tap, TAP_IN_BUFFER, IO_BUFFER_SIZE);
+		
+		if (*stop) {
+			printf("stopping eth receive thread...\n");
+			break;
+		}
+		
 		if (tap_in_bytes_read < 0) {
 			fprintf(stderr, "fail to read packets from tap interface\n");
 			return NULL;
@@ -23,7 +30,7 @@ void* tap_receive_thread_proc(void* args) {
 		printf("Printing packet received via tap interface.\n");
 		packet_print(TAP_IN_BUFFER);
 
-		int32_t spoofed_in_packet_size = in_spoof_packet(isd, TAP_IN_BUFFER, tap_in_bytes_read, ETH_OUT_BUFFER);
+		int32_t spoofed_in_packet_size = eth_spoof_packet(esd, TAP_IN_BUFFER, tap_in_bytes_read, ETH_OUT_BUFFER);
 
 		if (spoofed_in_packet_size < 0) {
 			fprintf(stderr, "fail to spoof in packet\n");
@@ -36,5 +43,6 @@ void* tap_receive_thread_proc(void* args) {
 		}
 	}
 
+	*stop = 1;
 	return NULL;
 }

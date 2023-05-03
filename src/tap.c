@@ -3,14 +3,10 @@
 #include <net/if.h>
 #include <linux/if_tun.h>
 #include <sys/ioctl.h>
-#include <netinet/in.h>
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <linux/if_arp.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
 #include <assert.h>
 #include <net/route.h>
 #include <errno.h>

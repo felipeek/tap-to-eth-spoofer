@@ -1,16 +1,11 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <memory.h>
-#include "out.h"
-#include "packet.h"
-#include "tap.h"
-#include "util.h"
+#include "tap_spoof.h"
 
-void out_spoof_init(Out_Spoofing_Descriptor* osd) {
+void tap_spoof_init(Tap_Spoofing_Descriptor* tsd) {
 }
 
-int32_t out_spoof_packet(Out_Spoofing_Descriptor* osd, 
+int32_t tap_spoof_packet(Tap_Spoofing_Descriptor* tsd, 
 		const uint8_t* received_packet_data, int32_t received_packet_length, uint8_t* buffer) {
 	memcpy(buffer, received_packet_data, received_packet_length);
 	return received_packet_length;
