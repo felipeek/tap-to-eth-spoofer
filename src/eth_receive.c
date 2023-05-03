@@ -45,6 +45,7 @@ void* eth_receive_thread_proc(void* args) {
 						pcl.last = NULL;
 					}
 
+					printf("\n\n\nSEEING OWN PACKET\n\n\n");
 					continue;
 				}
 			}

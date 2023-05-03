@@ -72,6 +72,17 @@ int eth_init(Eth_Descriptor* eth) {
 		return -1;
 	}
 
+	// Enable promiscuous mode
+	struct packet_mreq mr;
+	memset(&mr, 0, sizeof(mr));
+	mr.mr_ifindex = eth->ifindex;
+	mr.mr_type = PACKET_MR_PROMISC;
+	if (setsockopt(eth->sockfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) < 0) {
+		perror("fail to set promiscuous mode (setsockopt)");
+		close(eth->sockfd);
+		return -1;
+	}
+
 	char mac_buf[32];
 	char ip_buf[32];
 	char netmask_buf[32];
