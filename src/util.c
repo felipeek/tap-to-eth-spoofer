@@ -33,6 +33,11 @@ void util_mac_address_to_str(const uint8_t mac_addr[6], uint8_t mac_addr_str[32]
 		mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
 }
 
+void util_mac_address_str_to_buf(const uint8_t mac_addr_str[32], uint8_t mac_addr[6]) {
+	sscanf(mac_addr_str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+		&mac_addr[0], &mac_addr[1], &mac_addr[2], &mac_addr[3], &mac_addr[4], &mac_addr[5]);
+}
+
 // read and parse /proc/net/route to extract the default gateway
 // ugly code, make it better later
 int util_get_default_gateway(const char* if_name, uint32_t* gateway) {

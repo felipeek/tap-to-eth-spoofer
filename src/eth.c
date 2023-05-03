@@ -11,9 +11,7 @@
 #include "packet.h"
 #include "util.h"
 
-#define ETH_INTERFACE_NAME "eno1"
-
-int eth_init(Eth_Descriptor* eth) {
+int eth_init(Eth_Descriptor* eth, uint8_t* interface_name) {
 	// Open a socket to send packets to interact with eth interface
 	eth->sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (eth->sockfd < 0) {
@@ -21,10 +19,10 @@ int eth_init(Eth_Descriptor* eth) {
 		return -1;
 	}
 
-	eth->ifindex = if_nametoindex(ETH_INTERFACE_NAME);
+	eth->ifindex = if_nametoindex(interface_name);
 	
 	struct ifreq ifr;
-	strncpy(ifr.ifr_ifrn.ifrn_name, ETH_INTERFACE_NAME, IFNAMSIZ);
+	strncpy(ifr.ifr_ifrn.ifrn_name, interface_name, IFNAMSIZ);
 	
 	// Get eth interface MAC address
 	if (ioctl(eth->sockfd, SIOCGIFHWADDR, &ifr) < 0) {
@@ -35,7 +33,7 @@ int eth_init(Eth_Descriptor* eth) {
 	memcpy(eth->mac_address, ifr.ifr_ifru.ifru_hwaddr.sa_data, 6);
 
 	// Get eth interface IP address
-	strncpy(ifr.ifr_ifrn.ifrn_name, ETH_INTERFACE_NAME, IFNAMSIZ);
+	strncpy(ifr.ifr_ifrn.ifrn_name, interface_name, IFNAMSIZ);
 	ifr.ifr_ifru.ifru_addr.sa_family = AF_INET;
 
 	if (ioctl(eth->sockfd, SIOCGIFADDR, &ifr) < 0) {
@@ -47,7 +45,7 @@ int eth_init(Eth_Descriptor* eth) {
 
 	// Get eth interface netmask
 	struct ifreq ifr_eth_netmask;
-	strncpy(ifr_eth_netmask.ifr_name, ETH_INTERFACE_NAME, IFNAMSIZ);
+	strncpy(ifr_eth_netmask.ifr_name, interface_name, IFNAMSIZ);
 	if (ioctl(eth->sockfd, SIOCGIFNETMASK, &ifr_eth_netmask) < 0) {
 		perror("fail to get eth interface netmask (ioctl)");
 		close(eth->sockfd);
@@ -56,8 +54,8 @@ int eth_init(Eth_Descriptor* eth) {
 	eth->netmask = ((struct sockaddr_in*)&ifr_eth_netmask.ifr_addr)->sin_addr.s_addr;
 
 	// Get eth interface default gateway
-	if (util_get_default_gateway(ETH_INTERFACE_NAME, &eth->default_gateway) < 0) {
-		fprintf(stderr, "fail to get default gateway of [%s]\n", ETH_INTERFACE_NAME);
+	if (util_get_default_gateway(interface_name, &eth->default_gateway) < 0) {
+		fprintf(stderr, "fail to get default gateway of [%s]\n", interface_name);
 		close(eth->sockfd);
 		return -1;
 	}
@@ -81,7 +79,7 @@ int eth_init(Eth_Descriptor* eth) {
 	util_ip_address_to_str(eth->ip_address, ip_buf);
 	util_ip_address_to_str(eth->netmask, netmask_buf);
 	util_ip_address_to_str(eth->default_gateway, default_gateway_buf);
-	printf("Successfully loaded interface [%s] with:\n", ETH_INTERFACE_NAME);
+	printf("Successfully loaded interface [%s] with:\n", interface_name);
 	printf("\t- MAC Address: [%s]\n", mac_buf);
 	printf("\t- IP Address: [%s]\n", ip_buf);
 	printf("\t- Net Mask: [%s]\n", netmask_buf);

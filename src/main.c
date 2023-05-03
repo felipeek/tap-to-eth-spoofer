@@ -7,6 +7,15 @@
 #include <pthread.h>
 #include "eth_receive.h"
 #include "tap_receive.h"
+#include "util.h"
+
+#define TAP_INTERFACE_NAME "tap0"
+// for now, let's make the tap interface be in the same network as eth
+// for that, it has to have a different IP within the same subnet, and also same default gateway
+#define TAP_INTERFACE_IP "192.168.0.15"
+#define TAP_INTERFACE_NETMASK "255.255.255.0"
+#define TAP_DEFAULT_GATEWAY_IP "192.168.0.1"
+static char TAP_MAC_ADDR[6] = { 0x82, 0xa2, 0x17, 0x43, 0x15, 0xff };
 
 int main(int argc, char *argv[]) {
 	Eth_Descriptor eth;
@@ -15,14 +24,33 @@ int main(int argc, char *argv[]) {
 	Tap_Spoofing_Descriptor tsd;
 	atomic_int thread_stop = 0;
 
-	if (tap_init(&tap)) {
-		fprintf(stderr, "fail to init tap\n");
+	if (argc != 5) {
+		fprintf(stderr, "usage: %s <tap_interface_name> <eth_interface_name> <tap_interface_ip> <tap_interface_mac>\n", argv[0]);
+		fprintf(stderr, "example: %s tap0 eth0 192.168.0.22 82:a2:17:43:15:ff\n", argv[0]);
+		fprintf(stderr, "\t - <tap_interface_name>: an arbitrary name for the tap interface, will be automatically created, e.g. tap0\n");
+		fprintf(stderr, "\t - <eth_interface_name>: the name of the eth interface, which must already exist, e.g. eth0\n");
+		fprintf(stderr, "\t - <tap_interface_ip>: the ip of the tap interface, it is arbitrary, however, it must be within the same subnet of the eth interface, e.g. 192.168.0.22\n");
+		fprintf(stderr, "\t - <tap_interface_mac>: the mac of the tap interface, it is arbitrary, e.g. 82:a2:17:43:15:ff\n");
 		return -1;
 	}
 
-	if (eth_init(&eth)) {
+	uint8_t* tap_interface_name = argv[1];
+	uint8_t* eth_interface_name = argv[2];
+	uint32_t tap_interface_ip = util_ip_address_str_to_uint32(argv[3]);
+	uint8_t tap_interface_mac[6];
+	util_mac_address_str_to_buf(argv[4], tap_interface_mac);
+
+	if (eth_init(&eth, eth_interface_name)) {
 		fprintf(stderr, "fail to init eth\n");
 		tap_release(&tap);
+		return -1;
+	}
+
+	uint32_t eth_netmask = eth_get_netmask_address(&eth);
+	uint32_t eth_default_gateway = eth_get_default_gateway(&eth);
+
+	if (tap_init(&tap, tap_interface_name, tap_interface_ip, eth_netmask, eth_default_gateway, tap_interface_mac)) {
+		fprintf(stderr, "fail to init tap\n");
 		return -1;
 	}
 

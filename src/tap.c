@@ -15,16 +15,9 @@
 #include "util.h"
 
 #define TAP_DEVICE_FILE "/dev/net/tun"
-#define TAP_INTERFACE_NAME "tap0"
 
-// for now, let's make the tap interface be in the same network as eth
-// for that, it has to have a different IP within the same subnet, and also same default gateway
-#define TAP_INTERFACE_IP "192.168.0.15"
-#define TAP_INTERFACE_NETMASK "255.255.255.0"
-#define TAP_DEFAULT_GATEWAY_IP "192.168.0.1"
-static char TAP_MAC_ADDR[6] = { 0x82, 0xa2, 0x17, 0x43, 0x15, 0xff };
-
-int tap_init(Tap_Descriptor* tap) {
+int tap_init(Tap_Descriptor* tap, uint8_t* interface_name, uint32_t ip_address, uint32_t netmask,
+		uint32_t default_gateway_ip_address, uint8_t mac_address[6]) {
 	struct ifreq ifr;
 	struct sockaddr_in addr;
 
@@ -36,7 +29,7 @@ int tap_init(Tap_Descriptor* tap) {
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-	strncpy(ifr.ifr_name, TAP_INTERFACE_NAME, IFNAMSIZ);
+	strncpy(ifr.ifr_name, interface_name, IFNAMSIZ);
 
 	// Create the TAP interface via the TAP device
 	if (ioctl(tap->fd, TUNSETIFF, (void *)&ifr) < 0) {
@@ -76,7 +69,7 @@ int tap_init(Tap_Descriptor* tap) {
 	// Prepare to set tap interface IP
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = inet_addr(TAP_INTERFACE_IP);
+	addr.sin_addr.s_addr = ip_address;
 	memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
 
 	// Set tap interface IP
@@ -87,14 +80,18 @@ int tap_init(Tap_Descriptor* tap) {
 		return -1;
 	}
 
+	char buf[32];
+	util_ip_address_to_str(netmask, buf);
+	printf("NETMASK IS %s\n", buf);
+
 	// Prepare to set tap interface netmask
-	struct sockaddr_in netmask;
-	memset(&netmask, 0, sizeof(struct sockaddr_in));
-	netmask.sin_family = AF_INET;
-	inet_aton(TAP_INTERFACE_NETMASK, &netmask.sin_addr);
+	struct sockaddr_in sock_netmask;
+	memset(&sock_netmask, 0, sizeof(struct sockaddr_in));
+	sock_netmask.sin_family = AF_INET;
+	sock_netmask.sin_addr.s_addr = netmask;
 
 	// Set tap interface netmask
-	memcpy(&ifr.ifr_netmask, &netmask, sizeof(struct sockaddr_in));
+	memcpy(&ifr.ifr_netmask, &sock_netmask, sizeof(struct sockaddr_in));
 	if (ioctl(sockfd, SIOCSIFNETMASK, &ifr) < 0) {
 		perror("fail to set tap interface netmask (ioctl)");
 		close(tap->fd);
@@ -103,7 +100,7 @@ int tap_init(Tap_Descriptor* tap) {
 	}
 
 	ifr.ifr_ifru.ifru_hwaddr.sa_family = 1; // eq to ARPHRD_ETHER , not sure where is this is documented...
-	memcpy(ifr.ifr_ifru.ifru_hwaddr.sa_data, TAP_MAC_ADDR, sizeof(TAP_MAC_ADDR));
+	memcpy(ifr.ifr_ifru.ifru_hwaddr.sa_data, mac_address, 6);
 
 	// Set tap interface MAC address
 	if (ioctl(sockfd, SIOCSIFHWADDR, &ifr) < 0) {
@@ -120,12 +117,12 @@ int tap_init(Tap_Descriptor* tap) {
 	// Set the destination address to 0.0.0.0 (default route)
 	route.rt_dst.sa_family = AF_INET;
 	route.rt_flags = RTF_GATEWAY;
-	route.rt_dev = TAP_INTERFACE_NAME;
+	route.rt_dev = interface_name;
 	
 	// Set the gateway IP address
 	struct sockaddr_in* gateway_addr = (struct sockaddr_in *)&route.rt_gateway;
 	gateway_addr->sin_family = AF_INET;
-	inet_aton(TAP_DEFAULT_GATEWAY_IP, &gateway_addr->sin_addr);
+	gateway_addr->sin_addr.s_addr = default_gateway_ip_address;
 
 	// Remove the route entry from the routing table
     if (ioctl(sockfd, SIOCDELRT, &route) < 0) {
@@ -153,6 +150,8 @@ int tap_init(Tap_Descriptor* tap) {
 		return -1;
 	}
 
+	tap->ip_address = ip_address;
+	memcpy(tap->mac_address, mac_address, 6);
 	close(sockfd);
 	return 0;
 }
@@ -185,9 +184,9 @@ void tap_release(Tap_Descriptor* tap) {
 }
 
 uint32_t tap_get_ip_address(Tap_Descriptor* tap) {
-	return util_ip_address_str_to_uint32(TAP_INTERFACE_IP);
+	return tap->ip_address;
 }
 
 void tap_get_mac_address(Tap_Descriptor* tap, uint8_t mac_address[6]) {
-	memcpy(mac_address, TAP_MAC_ADDR, 6);
+	memcpy(mac_address, tap->mac_address, 6);
 }
