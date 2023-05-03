@@ -3,9 +3,9 @@ CFLAGS = -g -m64
 LDFLAGS= -lpthread
 
 # Final binary
-BIN = linux-tap-tests
+BIN = tap-to-eth-spoofer
 # Put all auto generated stuff to this build dir.
-BUILD_DIR = ./bin/linux-tap-tests
+BUILD_DIR = ./bin/tap-to-eth-spoofer
 
 # List of all .c source files.
 C = $(wildcard ./src/*.c)
