@@ -9,14 +9,6 @@
 #include "tap_receive.h"
 #include "util.h"
 
-#define TAP_INTERFACE_NAME "tap0"
-// for now, let's make the tap interface be in the same network as eth
-// for that, it has to have a different IP within the same subnet, and also same default gateway
-#define TAP_INTERFACE_IP "192.168.0.15"
-#define TAP_INTERFACE_NETMASK "255.255.255.0"
-#define TAP_DEFAULT_GATEWAY_IP "192.168.0.1"
-static char TAP_MAC_ADDR[6] = { 0x82, 0xa2, 0x17, 0x43, 0x15, 0xff };
-
 int main(int argc, char *argv[]) {
 	Eth_Descriptor eth;
 	Tap_Descriptor tap;
