@@ -42,15 +42,30 @@ int main(int argc, char *argv[]) {
 
 	if (eth_init(&eth, eth_interface_name)) {
 		fprintf(stderr, "fail to init eth\n");
-		tap_release(&tap);
 		return -1;
 	}
 
+	uint32_t eth_ip = eth_get_ip_address(&eth);
 	uint32_t eth_netmask = eth_get_netmask_address(&eth);
 	uint32_t eth_default_gateway = eth_get_default_gateway(&eth);
 
+	// check if provided tap interface IP is within eth subnet
+	// if it is not, we fail to start, this is because we are by default simply dispatching tap packets to eth
+	// so in this case these packets would have a source IP address that is not part of that subnet, which could
+	// introduce routing problems.
+	// we could circumvent this by always mapping TAP interface's IP address to another IP within eth's subnet when dispatching
+	// and therefore allowing TAP interface's subnet to be arbitrary... but this is not being done atm
+	// (also, would need to probably fix other stuff, e.g. we would need to also map the default gateway, and review the
+	// sent packets list logic in eth_receive, as we would probably not receive duplicated packets in eth anymore)
+	if (!util_is_ip_within_subnet(tap_interface_ip, eth_netmask, eth_ip)) {
+		fprintf(stderr, "fail: tap interface IP not within eth subnet\n");
+		eth_release(&eth);
+		return -1;
+	}
+
 	if (tap_init(&tap, tap_interface_name, tap_interface_ip, eth_netmask, eth_default_gateway, tap_interface_mac)) {
 		fprintf(stderr, "fail to init tap\n");
+		eth_release(&eth);
 		return -1;
 	}
 

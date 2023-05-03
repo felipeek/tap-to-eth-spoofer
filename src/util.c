@@ -106,3 +106,7 @@ int util_get_default_gateway(const char* if_name, uint32_t* gateway) {
 
     return 0;
 }
+
+int util_is_ip_within_subnet(uint32_t ip, uint32_t netmask, uint32_t netip) {
+	return (netip & netmask) == (ip & netmask);
+}
